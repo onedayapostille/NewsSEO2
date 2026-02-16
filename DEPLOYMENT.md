@@ -216,6 +216,32 @@ docker build --no-cache -t news-seo-analyzer .
 df -h
 ```
 
+### Portainer cannot add GHCR registry (`context deadline exceeded`)
+If Portainer shows an error like:
+
+`failed to list registries: Get "https://<your-server>:9443/api/registries": context deadline exceeded`
+
+the timeout is usually between your browser/reverse-proxy and Portainer API (port `9443`), not GHCR itself.
+
+1. **Verify Portainer API is reachable from your browser/network**
+   ```bash
+   curl -k https://YOUR_SERVER_IP:9443/api/status
+   ```
+2. **Confirm firewall/security-group allows 9443/TCP** (or your reverse-proxy target port).
+3. **If using Nginx/Traefik proxy, increase upstream timeout** for Portainer routes.
+4. **Register GHCR endpoint correctly** in Portainer:
+   - Registry URL: `ghcr.io`
+   - Username: your GitHub username/org
+   - Password: GitHub PAT with `read:packages`
+5. **Fallback without Portainer registry UI:**
+   ```bash
+   docker login ghcr.io -u YOUR_GITHUB_USER
+   docker pull ghcr.io/YOUR_ORG/YOUR_IMAGE:latest
+   docker compose up -d
+   ```
+
+If the image is private, host-level `docker login ghcr.io` is required before `docker compose pull`.
+
 ---
 
 ## Database Schema
