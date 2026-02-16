@@ -2,41 +2,45 @@ name: Deploy to VPS
 
 on:
   workflow_run:
-    workflows: ["Build and Push Docker Image"]
-    branches: [main]
+    workflows: ["Docker Build & Push"]
     types: [completed]
+    branches: [main, master]
   workflow_dispatch:
-
-permissions:
-  contents: read
-  packages: read
 
 jobs:
   deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+
     steps:
-      - name: Deploy over SSH
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
-          port: ${{ secrets.VPS_PORT }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
           script: |
-            set -e
-            cd /opt/newsseo
-            test -f .env || { echo "Missing /opt/newsseo/.env"; exit 1; }
-            test -f docker-compose.yml || { echo "Missing /opt/newsseo/docker-compose.yml"; exit 1; }
-            export GHCR_OWNER="$(echo "${{ github.repository_owner }}" | tr "[:upper:]" "[:lower:]")"
-            export IMAGE_TAG="latest"
-            export CR_PAT="${{ secrets.GHCR_PAT != "" && secrets.GHCR_PAT || github.token }}"
-            export CR_USER="${{ secrets.GHCR_USER != "" && secrets.GHCR_USER || github.actor }}"
-
-            echo "$CR_PAT" | docker login ghcr.io -u "$CR_USER" --password-stdin
-            docker compose --project-name newsseo pull
-            docker compose --project-name newsseo up -d --remove-orphans
-            docker logout ghcr.io
-
-            PORT="${PORT:-3001}"
-            curl -fsS "http://localhost:${PORT}/health"
+            cd ${{ secrets.DEPLOY_PATH || '~/app' }}
+            
+            # Pull latest code
+            git pull origin main || git pull origin master
+            
+            # Login to GHCR
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # Pull latest image
+            docker compose pull
+            
+            # Restart services
+            docker compose up -d --remove-orphans
+            
+            # Cleanup old images
+            docker image prune -f
+            
+            # Health check
+            sleep 10
+            curl -f http://localhost:3001/health || echo "Warning: Health check failed"

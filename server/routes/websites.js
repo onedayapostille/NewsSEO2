@@ -71,4 +71,21 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// Get crawl sessions for a specific website
+router.get('/:id/sessions', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('crawl_sessions')
+      .select('*')
+      .eq('website_id', req.params.id)
+      .order('started_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error) {
+    console.error('Error fetching crawl sessions:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

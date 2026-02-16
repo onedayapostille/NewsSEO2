@@ -1,3 +1,6 @@
+// API URL configuration
+// In development: empty string works with Vite proxy or same-origin
+// In production: should be set via VITE_API_URL environment variable
 const API_URL = import.meta.env.VITE_API_URL || '';
 
 export const api = {

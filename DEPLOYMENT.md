@@ -1,122 +1,230 @@
-# Deployment Guide
+# News SEO Analyzer - Deployment Guide
 
-This project is deployed as **one service**: Express serves both API (`/api/*`) and the built frontend (`/dist`) with SPA fallback.
+## Quick Start (Local Development)
 
-## 1) Production architecture
+### Prerequisites
+- Node.js 18+ (recommended: Node 20)
+- Supabase account (free tier works)
 
-- Container image: `ghcr.io/<owner>/newsseo`
-- Runtime process: `node server/index.js`
-- Port: `process.env.PORT` (default `3001`)
-- Health check: `GET /health`
-- Diagnostics: `GET /api/diagnostics`
-
-## 2) Required environment variables
-
-Copy `.env.example` to `.env` and set values:
-
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-- `PORT` (default `3001`)
-- Feature flags: `ENABLE_MOZ`, `ENABLE_GSC`, `ENABLE_OPENAI`
-- Integration credentials (optional):
-  - `MOZ_ACCESS_ID`, `MOZ_SECRET_KEY`
-  - `GSC_CLIENT_ID`, `GSC_CLIENT_SECRET`, `GSC_REDIRECT_URI`
-  - `OPENAI_API_KEY`, `OPENAI_MODEL`
-- For compose image source:
-  - `GHCR_OWNER` (your GitHub org/user)
-  - `IMAGE_TAG` (`latest` by default)
-
-## 3) GitHub Actions CI/CD
-
-### A. Build + push to GHCR
-Workflow file: `.github/workflows/docker-build.yml`
-
-Trigger: push to `main`
-
-Pushes:
-- `ghcr.io/<owner>/newsseo:latest`
-- `ghcr.io/<owner>/newsseo:<sha>`
-
-### B. Deploy to VPS over SSH (no Portainer)
-Workflow file: `.github/workflows/deploy-vps.yml`
-
-Trigger: after successful build workflow on `main`
-
-Remote deploy commands:
-- `docker login ghcr.io`
-- `docker compose pull`
-- `docker compose up -d`
-- `curl -fsS http://localhost:$PORT/health`
-
-### Required GitHub Secrets
-
-- `VPS_HOST`
-- `VPS_USER`
-- `VPS_PORT`
-- `VPS_SSH_KEY`
-- `GHCR_PAT` (recommended for private packages/VPS pull auth; fallback is workflow `github.token`)
-- `GHCR_USER` (optional)
-
-## 4) VPS setup (primary)
-
-On your server:
-
+### 1. Clone and Setup
 ```bash
-sudo mkdir -p /opt/newsseo
-cd /opt/newsseo
+git clone https://github.com/onedayapostille/NewsSEOIntelligenceSystem.git
+cd NewsSEOIntelligenceSystem
 ```
 
-Copy from repo to VPS:
-- `docker-compose.yml`
-- `.env` (from `.env.example`, filled with real values)
-
-> This deployment uses direct Docker Compose over SSH only. Do **not** use Portainer APIs (9443).
-
-Then deploy:
-
+### 2. Configure Environment
 ```bash
-docker compose pull
-docker compose up -d
+cp .env.example .env
+# Edit .env with your Supabase credentials
+```
+
+Required variables:
+- `VITE_SUPABASE_URL` - Your Supabase project URL
+- `VITE_SUPABASE_ANON_KEY` - Your Supabase anon key
+
+### 3. Install Dependencies
+```bash
+npm install
+```
+
+### 4. Start Development Servers
+
+**Option A: Full stack (recommended)**
+```bash
+# Terminal 1: Frontend (Vite dev server)
+npm run dev
+
+# Terminal 2: Backend
+cd server && npm start
+```
+
+**Option B: Production build locally**
+```bash
+npm run build
+cd server && npm start
+# Visit http://localhost:3001
+```
+
+### 5. Verify
+```bash
 curl http://localhost:3001/health
 ```
 
-## 5) Secondary alternatives
+---
 
-### Railway
-- Create a new project from this GitHub repo.
-- Deploy using Dockerfile.
-- Set all env vars from `.env.example`.
-- Health check path: `/health`.
+## Production Deployment
 
-### Render
-- Create a Web Service from this repo.
-- Use Docker deployment.
-- Set all env vars from `.env.example`.
-- Health check path: `/health`.
+### Option 1: Docker (Recommended)
 
-### Cloud Run
-
+#### Build and Run
 ```bash
-gcloud run deploy newsseo \
-  --image ghcr.io/<owner>/newsseo:latest \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars PORT=3001,NODE_ENV=production
+# Build
+docker build -t news-seo-analyzer .
+
+# Run
+docker run -p 3001:3001 --env-file .env news-seo-analyzer
+
+# Or use docker compose
+docker compose up -d
 ```
 
-## 6) Integration settings API verification
+#### Docker Compose
+The included `docker-compose.yml` provides:
+- Health checks
+- Resource limits
+- Auto-restart
+- Log rotation
 
-Manual checks:
+### Option 2: VPS with GitHub Actions
 
+#### Prerequisites
+1. A VPS with Docker installed
+2. SSH access configured
+3. GitHub repository
+
+#### Setup GitHub Secrets
+Add these secrets in your repository settings (Settings → Secrets → Actions):
+
+| Secret | Description |
+|--------|-------------|
+| `VPS_HOST` | Your VPS IP address or hostname |
+| `VPS_USER` | SSH username |
+| `VPS_SSH_KEY` | Private SSH key (full key, including BEGIN/END lines) |
+| `VPS_PORT` | SSH port (optional, defaults to 22) |
+| `DEPLOY_PATH` | App directory on VPS (optional, defaults to ~/app) |
+
+#### VPS Preparation
 ```bash
-curl http://localhost:3001/api/integrations
-curl -X POST http://localhost:3001/api/integrations \
-  -H 'Content-Type: application/json' \
-  -d '{"provider":"openai","isEnabled":false,"config":{"apiKey":"sk-...","model":"gpt-4o-mini"}}'
-curl -X POST http://localhost:3001/api/integrations/test \
-  -H 'Content-Type: application/json' \
-  -d '{"provider":"openai","config":{"apiKey":"sk-...","model":"gpt-4o-mini"}}'
+# On your VPS
+mkdir -p ~/app
+cd ~/app
+
+# Clone repo (first time only)
+git clone https://github.com/YOUR_USERNAME/NewsSEOIntelligenceSystem.git .
+
+# Create .env file
+cp .env.example .env
+nano .env  # Add your credentials
+
+# Verify docker works
+docker --version
+docker compose version
 ```
 
-Secrets are masked in API responses.
+#### Automatic Deployment
+Once configured, pushing to `main` branch will:
+1. Build Docker image via GitHub Actions
+2. Push to GitHub Container Registry (GHCR)
+3. SSH to VPS and run `docker compose up -d`
+
+#### Manual Deployment (VPS)
+```bash
+cd ~/app
+git pull origin main
+docker compose pull
+docker compose up -d
+```
+
+### Option 3: Railway / Render
+
+Both platforms support Docker deployment:
+
+1. Connect your GitHub repository
+2. Set environment variables in the platform dashboard
+3. Deploy automatically on push
+
+**Railway:**
+- Detects Dockerfile automatically
+- Set `PORT=3001` in environment variables
+
+**Render:**
+- Create a "Web Service"
+- Select "Docker" as environment
+- Set `PORT=3001` environment variable
+
+---
+
+## Environment Variables Reference
+
+### Required
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `VITE_SUPABASE_URL` | Supabase project URL | `https://xxx.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon/public key | `eyJhbGc...` |
+
+### Optional
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | Server port | `3001` |
+| `NODE_ENV` | Environment | `development` |
+| `VITE_API_URL` | Backend URL for frontend | (empty for same-origin) |
+| `OPENAI_API_KEY` | OpenAI API key | - |
+| `GSC_CLIENT_ID` | Google Search Console OAuth client ID | - |
+| `GSC_CLIENT_SECRET` | Google Search Console OAuth client secret | - |
+| `MOZ_ACCESS_ID` | Moz API access ID | - |
+| `MOZ_SECRET_KEY` | Moz API secret key | - |
+
+---
+
+## Verification Checklist
+
+After deployment, verify these endpoints:
+
+```bash
+# Health check
+curl https://yourdomain.com/health
+# Expected: {"status":"healthy","backend":"ok","database":"connected",...}
+
+# API check
+curl https://yourdomain.com/api/websites
+# Expected: [] or list of websites
+
+# Integrations
+curl https://yourdomain.com/api/integrations
+# Expected: {"integrations":[...]}
+```
+
+---
+
+## Troubleshooting
+
+### Server won't start
+```bash
+# Check logs
+docker logs <container_id>
+
+# Verify environment
+docker exec <container_id> env | grep SUPABASE
+```
+
+### Database connection failed
+- Verify `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are correct
+- Check Supabase dashboard for connection issues
+- Ensure Row Level Security (RLS) policies are configured
+
+### Frontend shows "Backend: Offline"
+- Verify backend is running on port 3001
+- Check `VITE_API_URL` is correct (or empty for same-origin)
+- Check CORS configuration
+
+### Docker build fails
+```bash
+# Clean build
+docker build --no-cache -t news-seo-analyzer .
+
+# Check disk space
+df -h
+```
+
+---
+
+## Database Schema
+
+The app uses Supabase (PostgreSQL) with these tables:
+- `websites` - Tracked domains
+- `crawl_sessions` - Crawl history
+- `pages` - Crawled pages
+- `seo_issues` - Detected SEO issues
+- `integration_settings` - API credentials (encrypted)
+
+Run the SQL migrations in `supabase/migrations/` to set up the schema.
