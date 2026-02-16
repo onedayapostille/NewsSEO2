@@ -87,7 +87,38 @@ VITE_API_URL=http://localhost:3001
 PORT=3001
 ```
 
-**Optional Integrations:**
+### Configuring Integrations (UI Method - Recommended)
+
+**NEW:** Integrations can now be configured directly from the web interface!
+
+1. Start the application: `npm run dev:all`
+2. Click the **"Integrations"** button in the header
+3. For each integration you want to enable:
+   - Enter your API credentials
+   - Click **"Save Settings"**
+   - Click **"Test Connection"** to verify
+   - Toggle the switch to enable/disable
+
+**Available Integrations:**
+
+- **Google Search Console** - Coverage data, top pages, search queries (Free)
+  - Requires: Client ID, Client Secret, Redirect URI
+  - Get credentials from: [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+
+- **Moz API** - Domain Authority, Spam Score, link metrics (Paid)
+  - Requires: Access ID, Secret Key
+  - Get credentials from: [moz.com/products/api](https://moz.com/products/api)
+
+- **OpenAI** - AI-powered SEO recommendations (Pay-per-use)
+  - Requires: API Key, Model (optional)
+  - Get API key from: [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+
+**Security Note:** This is an admin-only feature with no authentication system yet. In production, you should implement proper authentication to restrict access to administrators only.
+
+### Alternative: Environment Variables (Legacy Method)
+
+You can still configure integrations via environment variables:
+
 ```env
 # Enable features (set to true to enable)
 ENABLE_GSC=false
@@ -99,6 +130,8 @@ GSC_CLIENT_ID=...
 MOZ_ACCESS_ID=...
 OPENAI_API_KEY=...
 ```
+
+**Note:** UI settings take priority over environment variables. If you configure an integration via the UI, the environment variables will be ignored for that integration.
 
 See [INTEGRATIONS.md](./INTEGRATIONS.md) for complete setup instructions for each integration.
 

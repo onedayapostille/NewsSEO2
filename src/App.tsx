@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Database, Globe, Plus, TrendingUp, Activity, AlertCircle, CheckCircle } from 'lucide-react';
+import { Database, Globe, Plus, TrendingUp, Activity, AlertCircle, CheckCircle, Settings } from 'lucide-react';
 import { Website } from './types';
 import { api } from './api';
 import Dashboard from './components/Dashboard';
 import WebsiteDetail from './components/WebsiteDetail';
 import AddWebsiteModal from './components/AddWebsiteModal';
+import IntegrationsModal from './components/IntegrationsModal';
 
 interface HealthStatus {
   backend: string;
@@ -16,6 +17,7 @@ function App() {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showIntegrationsModal, setShowIntegrationsModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
@@ -135,14 +137,24 @@ function App() {
               </div>
             </div>
             {!selectedWebsiteId && (
-              <button
-                onClick={() => setShowAddModal(true)}
-                disabled={backendError || !healthStatus}
-                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Plus className="w-5 h-5" />
-                <span>Add Website</span>
-              </button>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setShowIntegrationsModal(true)}
+                  disabled={backendError || !healthStatus}
+                  className="flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Settings className="w-5 h-5" />
+                  <span>Integrations</span>
+                </button>
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  disabled={backendError || !healthStatus}
+                  className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>Add Website</span>
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -180,6 +192,12 @@ function App() {
         <AddWebsiteModal
           onClose={() => setShowAddModal(false)}
           onAdd={handleAddWebsite}
+        />
+      )}
+
+      {showIntegrationsModal && (
+        <IntegrationsModal
+          onClose={() => setShowIntegrationsModal(false)}
         />
       )}
 
