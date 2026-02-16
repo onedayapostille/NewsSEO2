@@ -1,9 +1,20 @@
 import express from 'express';
-import { supabase } from '../config/supabase.js';
+import { supabase, isSupabaseConfigured } from '../config/supabase.js';
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+// Middleware to check database availability
+const checkDb = (req, res, next) => {
+  if (!isSupabaseConfigured || !supabase) {
+    return res.status(503).json({ 
+      error: 'Database not configured',
+      message: 'Supabase environment variables are not set'
+    });
+  }
+  next();
+};
+
+router.get('/', checkDb, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('websites')
@@ -18,7 +29,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', checkDb, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('websites')
@@ -34,7 +45,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', checkDb, async (req, res) => {
   try {
     const { domain, display_name } = req.body;
 
@@ -56,7 +67,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', checkDb, async (req, res) => {
   try {
     const { error } = await supabase
       .from('websites')
@@ -72,7 +83,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // Get crawl sessions for a specific website
-router.get('/:id/sessions', async (req, res) => {
+router.get('/:id/sessions', checkDb, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('crawl_sessions')
