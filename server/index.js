@@ -12,6 +12,7 @@ import gscRouter from './routes/gsc.js';
 import mozRouter from './routes/moz.js';
 import aiRouter from './routes/ai.js';
 import integrationsRouter from './routes/integrations.js';
+import monitoringRouter from './routes/monitoring.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -107,6 +108,7 @@ app.use('/api/gsc', gscRouter);
 app.use('/api/moz', mozRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/integrations', integrationsRouter);
+app.use('/api/monitoring', monitoringRouter);
 
 app.use((req, res) => {
   res.status(404).json({
@@ -148,6 +150,7 @@ const server = app.listen(PORT, async () => {
   console.log(`   Health Check: http://localhost:${PORT}/health`);
   console.log(`   Websites API: http://localhost:${PORT}/api/websites`);
   console.log(`   Crawl API: http://localhost:${PORT}/api/crawl`);
+  console.log(`   Monitoring API: http://localhost:${PORT}/api/monitoring`);
   console.log(`   GSC API: http://localhost:${PORT}/api/gsc (${gscEnabled ? 'enabled' : 'disabled'})`);
   console.log(`   Moz API: http://localhost:${PORT}/api/moz (${mozEnabled ? 'enabled' : 'disabled'})`);
   console.log(`   Integrations API: http://localhost:${PORT}/api/integrations`);

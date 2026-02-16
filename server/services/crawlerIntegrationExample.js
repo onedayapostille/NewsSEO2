@@ -1,6 +1,8 @@
 import { supabase } from '../config/supabase.js';
 import performanceService from './performanceService.js';
 import semanticService from './semanticService.js';
+import changeDetectionService from './changeDetectionService.js';
+import anomalyDetectionService from './anomalyDetectionService.js';
 
 async function crawlPageWithIntelligence(url, crawlSessionId) {
   try {
@@ -155,6 +157,20 @@ async function startIntelligentCrawl(websiteId, crawlLimit = 10) {
     console.log(`\n✅ Intelligent crawl session completed: ${session.id}`);
     console.log(`   Pages crawled: ${pagesCrawled}`);
     console.log(`   Pages failed: ${pagesFailed}`);
+
+    try {
+      const changeResult = await changeDetectionService.runChangeDetection(session.id, websiteId);
+      console.log(`   📊 Change detection: ${changeResult.changes} changes detected`);
+    } catch (changeError) {
+      console.warn(`   ⚠️  Change detection failed (non-fatal): ${changeError.message}`);
+    }
+
+    try {
+      const anomalyResult = await anomalyDetectionService.runAnomalyDetectionForCrawlSession(session.id);
+      console.log(`   🔔 Anomaly detection: ${anomalyResult.anomalies} anomalies detected`);
+    } catch (anomalyError) {
+      console.warn(`   ⚠️  Anomaly detection failed (non-fatal): ${anomalyError.message}`);
+    }
 
     return session;
   } catch (error) {
