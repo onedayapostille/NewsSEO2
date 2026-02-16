@@ -88,7 +88,7 @@ app.get('/health', async (req, res) => {
     const health = {
       status: dbStatus ? 'healthy' : 'degraded',
       backend: 'ok',
-      db: dbStatus ? 'connected' : 'unknown',
+      database: dbStatus ? 'connected' : 'unknown',
       timestamp: new Date().toISOString(),
       uptime: Math.floor(process.uptime()),
       version: appVersion,
@@ -100,7 +100,7 @@ app.get('/health', async (req, res) => {
     res.status(200).json({
       status: 'degraded',
       backend: 'ok',
-      db: 'unknown',
+      database: 'unknown',
       timestamp: new Date().toISOString(),
       uptime: Math.floor(process.uptime()),
       version: appVersion,
