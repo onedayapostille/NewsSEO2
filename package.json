@@ -7,12 +7,11 @@
   "scripts": {
     "dev": "vite",
     "dev:backend": "cd server && npm run dev",
-    "build": "npm install && npm run build:client && npm run build:server",
+    "build": "npm run build:client",
     "build:client": "vite build",
-    "build:server": "cd server && npm install",
+    "build:server": "echo 'Backend is plain Node.js (no build step required)'",
     "preview": "vite preview",
-    "start": "node server/index.js",
-    "postinstall": "cd server && npm install"
+    "start": "node server/index.js"
   },
   "keywords": [
     "seo",

@@ -6,15 +6,15 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - '8001:8001'
+      - '3001:3001'
     environment:
       - NODE_ENV=production
-      - PORT=8001
+      - PORT=3001
     env_file:
       - .env
     restart: unless-stopped
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:8001/health']
+      test: ['CMD', 'curl', '-f', 'http://localhost:3001/health']
       interval: 30s
       timeout: 10s
       retries: 3

@@ -49,6 +49,23 @@ docker build -t newsseo:local .
 docker run --rm -p 3001:3001 --env-file .env newsseo:local
 ```
 
+### Docker deployment notes
+
+- The Docker image does **not** copy `.env`; pass runtime secrets with `--env-file .env` or explicit `-e` flags.
+- Runtime server settings are read by `server/index.js` (for example `PORT=3001`, Supabase keys, and optional integration keys).
+- Frontend `VITE_*` values are baked at build time and can be passed as build args:
+
+```bash
+docker build \
+  --build-arg VITE_SUPABASE_URL=https://your-project.supabase.co \
+  --build-arg VITE_SUPABASE_ANON_KEY=your_anon_key \
+  --build-arg VITE_API_URL=/api \
+  -t newsseo:local .
+```
+
+- If `VITE_API_URL` is omitted, the app can use same-origin requests (recommended when frontend and API are served from the same container/domain).
+
+
 ### Deployment readiness endpoints
 
 ```bash
