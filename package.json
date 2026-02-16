@@ -1,0 +1,22 @@
+{
+  "name": "news-seo-analyzer",
+  "version": "1.0.0",
+  "description": "Comprehensive SEO analysis platform for news websites",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "npm run start:backend",
+    "start:backend": "cd server && npm install && npm start",
+    "start:prod": "cd server && npm start",
+    "dev": "npm run dev:backend",
+    "dev:backend": "cd server && npm run dev",
+    "install:all": "npm install && cd server && npm install",
+    "postinstall": "cd server && npm install"
+  },
+  "keywords": ["seo", "news", "analytics", "monitoring", "crawler"],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

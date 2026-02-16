@@ -91,15 +91,47 @@ app.get('/health', async (req, res) => {
   res.status(statusCode).json(health);
 });
 
-app.get('/api/verify/integrations', async (req, res) => {
-  const featureConfig = await features.getFeatureConfig();
-  const warnings = features.getConfigWarnings();
+app.get('/api/diagnostics', async (req, res) => {
+  try {
+    const dbStatus = await checkDatabaseConnection();
+    const featureConfig = await features.getFeatureConfig();
+    const warnings = features.getConfigWarnings();
 
-  res.json({
-    features: featureConfig,
-    warnings,
-    configured: warnings.length === 0
-  });
+    const { data: integrations } = await supabase
+      .from('integration_settings')
+      .select('provider, is_enabled, last_test_status')
+      .catch(() => ({ data: [] }));
+
+    const envVars = {
+      VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL ? 'configured' : 'missing',
+      VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY ? 'configured' : 'missing',
+      PAGESPEED_API_KEY: process.env.PAGESPEED_API_KEY ? 'configured' : 'optional',
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY ? 'configured' : 'optional',
+      GSC_CLIENT_ID: process.env.GSC_CLIENT_ID ? 'configured' : 'optional',
+      GSC_CLIENT_SECRET: process.env.GSC_CLIENT_SECRET ? 'configured' : 'optional',
+      MOZ_ACCESS_ID: process.env.MOZ_ACCESS_ID ? 'configured' : 'optional',
+      MOZ_SECRET_KEY: process.env.MOZ_SECRET_KEY ? 'configured' : 'optional',
+      PORT: process.env.PORT || 3001,
+      NODE_ENV: process.env.NODE_ENV || 'development'
+    };
+
+    res.json({
+      status: 'ok',
+      database: dbStatus ? 'connected' : 'disconnected',
+      features: featureConfig,
+      integrations: integrations || [],
+      environment: envVars,
+      warnings: warnings,
+      baseUrl: `http://localhost:${PORT}`,
+      version: appVersion,
+      uptime: Math.floor(process.uptime())
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      error: error.message
+    });
+  }
 });
 
 app.use('/api/websites', websitesRouter);
@@ -148,12 +180,13 @@ const server = app.listen(PORT, async () => {
 
   console.log('📡 API Endpoints:');
   console.log(`   Health Check: http://localhost:${PORT}/health`);
+  console.log(`   Diagnostics: http://localhost:${PORT}/api/diagnostics`);
   console.log(`   Websites API: http://localhost:${PORT}/api/websites`);
   console.log(`   Crawl API: http://localhost:${PORT}/api/crawl`);
   console.log(`   Monitoring API: http://localhost:${PORT}/api/monitoring`);
+  console.log(`   Integrations API: http://localhost:${PORT}/api/integrations`);
   console.log(`   GSC API: http://localhost:${PORT}/api/gsc (${gscEnabled ? 'enabled' : 'disabled'})`);
   console.log(`   Moz API: http://localhost:${PORT}/api/moz (${mozEnabled ? 'enabled' : 'disabled'})`);
-  console.log(`   Integrations API: http://localhost:${PORT}/api/integrations`);
   console.log('');
   console.log('🚀 Backend is ready!');
 });
