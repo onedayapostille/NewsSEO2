@@ -23,6 +23,40 @@ curl http://localhost:3001/health
 # Returns: {"status":"healthy","backend":"ok","database":"connected",...}
 ```
 
+
+## Production Deployment (Docker + GitHub Actions)
+
+This repo includes production-ready containerization and CI/CD:
+
+- `Dockerfile` multi-stage build (Vite frontend + Express backend)
+- `docker-compose.yml` for single-service VPS deployment over SSH
+- `.github/workflows/docker-build.yml` (build + push to GHCR on `main`)
+- `.github/workflows/deploy-vps.yml` (auto-deploy to VPS after successful build)
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for full instructions.
+
+### Local production run
+
+```bash
+npm run build:client
+PORT=3001 node server/index.js
+```
+
+### Docker run
+
+```bash
+docker build -t newsseo:local .
+docker run --rm -p 3001:3001 --env-file .env newsseo:local
+```
+
+### Deployment readiness endpoints
+
+```bash
+curl http://localhost:3001/health
+curl http://localhost:3001/api/diagnostics
+curl http://localhost:3001/api/integrations
+```
+
 ## Features
 
 ### Core Features

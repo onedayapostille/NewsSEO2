@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { existsSync, readFileSync } from 'fs';
-import { join, dirname, resolve } from 'path';
+import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { supabase } from './config/supabase.js';
 import features from './config/features.js';
@@ -50,7 +50,7 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-const distPath = resolve(__dirname, '..', 'dist');
+const distPath = join(__dirname, '..', 'dist');
 if (existsSync(distPath)) {
   console.log('✅ Serving frontend from:', distPath);
   app.use(express.static(distPath));
@@ -88,7 +88,7 @@ app.get('/health', async (req, res) => {
     const health = {
       status: dbStatus ? 'healthy' : 'degraded',
       backend: 'ok',
-      database: dbStatus ? 'connected' : 'unknown',
+      db: dbStatus ? 'connected' : 'unknown',
       timestamp: new Date().toISOString(),
       uptime: Math.floor(process.uptime()),
       version: appVersion,
@@ -100,7 +100,7 @@ app.get('/health', async (req, res) => {
     res.status(200).json({
       status: 'degraded',
       backend: 'ok',
-      database: 'unknown',
+      db: 'unknown',
       timestamp: new Date().toISOString(),
       uptime: Math.floor(process.uptime()),
       version: appVersion,
@@ -125,27 +125,37 @@ app.get('/api/diagnostics', async (req, res) => {
       console.warn('Could not fetch integrations:', error.message);
     }
 
-    const envVars = {
-      VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL ? 'configured' : 'missing',
-      VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY ? 'configured' : 'missing',
-      PAGESPEED_API_KEY: process.env.PAGESPEED_API_KEY ? 'configured' : 'optional',
-      OPENAI_API_KEY: process.env.OPENAI_API_KEY ? 'configured' : 'optional',
-      GSC_CLIENT_ID: process.env.GSC_CLIENT_ID ? 'configured' : 'optional',
-      GSC_CLIENT_SECRET: process.env.GSC_CLIENT_SECRET ? 'configured' : 'optional',
-      MOZ_ACCESS_ID: process.env.MOZ_ACCESS_ID ? 'configured' : 'optional',
-      MOZ_SECRET_KEY: process.env.MOZ_SECRET_KEY ? 'configured' : 'optional',
-      PORT: process.env.PORT || 3001,
-      NODE_ENV: process.env.NODE_ENV || 'development'
+    const envFlags = {
+      ENABLE_MOZ: process.env.ENABLE_MOZ === 'true',
+      ENABLE_GSC: process.env.ENABLE_GSC === 'true',
+      ENABLE_OPENAI: process.env.ENABLE_OPENAI === 'true'
+    };
+
+    const integrationReadiness = {
+      moz: {
+        enabled: envFlags.ENABLE_MOZ,
+        configured: integrations.some((item) => item.provider === 'moz' && item.is_enabled)
+          || Boolean(process.env.MOZ_ACCESS_ID && process.env.MOZ_SECRET_KEY)
+      },
+      gsc: {
+        enabled: envFlags.ENABLE_GSC,
+        configured: integrations.some((item) => item.provider === 'gsc' && item.is_enabled)
+          || Boolean(process.env.GSC_CLIENT_ID && process.env.GSC_CLIENT_SECRET && process.env.GSC_REDIRECT_URI)
+      },
+      openai: {
+        enabled: envFlags.ENABLE_OPENAI,
+        configured: integrations.some((item) => item.provider === 'openai' && item.is_enabled)
+          || Boolean(process.env.OPENAI_API_KEY)
+      }
     };
 
     res.json({
       status: 'ok',
-      database: dbStatus ? 'connected' : 'disconnected',
-      features: featureConfig,
-      integrations: integrations,
-      environment: envVars,
-      warnings: warnings,
-      baseUrl: `http://localhost:${PORT}`,
+      db: dbStatus ? 'connected' : 'unknown',
+      featureStatus: featureConfig,
+      envFlags,
+      integrationReadiness,
+      warnings,
       version: appVersion,
       uptime: Math.floor(process.uptime())
     });
@@ -166,7 +176,7 @@ app.use('/api/integrations', integrationsRouter);
 app.use('/api/monitoring', monitoringRouter);
 
 app.get('*', (req, res) => {
-  const indexPath = resolve(__dirname, '..', 'dist', 'index.html');
+  const indexPath = join(__dirname, '..', 'dist', 'index.html');
   if (existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {

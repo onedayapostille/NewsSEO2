@@ -30,6 +30,52 @@ function maskConfig(provider, config) {
   return masked;
 }
 
+function getConfiguredFields(provider, config) {
+  if (!config || typeof config !== 'object') return [];
+
+  const requiredFields = {
+    gsc: ['clientId', 'clientSecret', 'redirectUri'],
+    moz: ['accessId', 'secretKey'],
+    openai: ['apiKey']
+  };
+
+  return (requiredFields[provider] || []).filter((field) => Boolean(config[field]));
+}
+
+function isMaskedValue(value) {
+  return typeof value === 'string' && value.startsWith('****');
+}
+
+async function loadCurrentConfig(provider) {
+  const { data, error } = await supabase
+    .from('integration_settings')
+    .select('config_json')
+    .eq('provider', provider)
+    .single();
+
+  if (error) throw error;
+
+  return data?.config_json || {};
+}
+
+function mergeConfigWithStored(provider, submittedConfig, storedConfig) {
+  const nextConfig = { ...(submittedConfig || {}) };
+
+  const secretKeysByProvider = {
+    gsc: ['clientSecret'],
+    moz: ['secretKey'],
+    openai: ['apiKey']
+  };
+
+  (secretKeysByProvider[provider] || []).forEach((key) => {
+    if (nextConfig[key] === '' || isMaskedValue(nextConfig[key])) {
+      nextConfig[key] = storedConfig[key] || '';
+    }
+  });
+
+  return nextConfig;
+}
+
 router.get('/', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -42,7 +88,8 @@ router.get('/', async (req, res) => {
     const integrations = data.map(item => ({
       provider: item.provider,
       isEnabled: item.is_enabled,
-      isConfigured: Object.keys(item.config_json || {}).length > 0,
+      isConfigured: getConfiguredFields(item.provider, item.config_json).length > 0,
+      configuredFields: getConfiguredFields(item.provider, item.config_json),
       config: maskConfig(item.provider, item.config_json),
       lastTestAt: item.last_test_at,
       lastTestStatus: item.last_test_status,
@@ -65,16 +112,18 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Invalid provider' });
     }
 
+    const currentConfig = await loadCurrentConfig(provider);
+    const mergedConfig = mergeConfigWithStored(provider, config, currentConfig);
+
     const updateData = {
       is_enabled: isEnabled,
-      config_json: config || {},
+      config_json: mergedConfig,
       updated_at: new Date().toISOString()
     };
 
     const { data, error } = await supabase
       .from('integration_settings')
-      .update(updateData)
-      .eq('provider', provider)
+      .upsert({ provider, ...updateData }, { onConflict: 'provider' })
       .select()
       .single();
 
@@ -85,7 +134,8 @@ router.post('/', async (req, res) => {
       integration: {
         provider: data.provider,
         isEnabled: data.is_enabled,
-        isConfigured: Object.keys(data.config_json || {}).length > 0,
+        isConfigured: getConfiguredFields(data.provider, data.config_json).length > 0,
+        configuredFields: getConfiguredFields(data.provider, data.config_json),
         config: maskConfig(data.provider, data.config_json),
         updatedAt: data.updated_at
       }
@@ -104,17 +154,20 @@ router.post('/test', async (req, res) => {
       return res.status(400).json({ error: 'Invalid provider' });
     }
 
+    const storedConfig = await loadCurrentConfig(provider);
+    const testConfig = mergeConfigWithStored(provider, config, storedConfig);
+
     let testResult = { success: false, message: 'Test not implemented' };
 
     switch (provider) {
       case 'gsc':
-        testResult = await testGscConnection(config);
+        testResult = await testGscConnection(testConfig);
         break;
       case 'moz':
-        testResult = await testMozConnection(config);
+        testResult = await testMozConnection(testConfig);
         break;
       case 'openai':
-        testResult = await testOpenAiConnection(config);
+        testResult = await testOpenAiConnection(testConfig);
         break;
     }
 
