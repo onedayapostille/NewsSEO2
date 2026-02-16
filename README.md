@@ -31,7 +31,7 @@ This repo includes production-ready containerization and CI/CD:
 - `Dockerfile` multi-stage build (Vite frontend + Express backend)
 - `docker-compose.yml` for single-service VPS deployment over SSH
 - `.github/workflows/docker-build.yml` (build + push to GHCR on `main`)
-- `.github/workflows/deploy-vps.yml` (auto-deploy to VPS via SSH + `docker compose build`)
+- `.github/workflows/deploy-vps.yml` (auto-deploy to VPS via SSH + `scripts/deploy-vps.sh`)
 
 See [DEPLOYMENT.md](./DEPLOYMENT.md) for full instructions.
 

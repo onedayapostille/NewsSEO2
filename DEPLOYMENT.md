@@ -115,8 +115,9 @@ docker compose version
 Once configured, pushing to `main` branch will:
 1. Build/test in GitHub Actions
 2. SSH to your VPS
-3. Build the image on the VPS with `docker compose build --pull`
-4. Restart services with `docker compose up -d`
+3. Run `scripts/deploy-vps.sh` on the VPS
+4. Build the image on the VPS with `docker compose build --pull`
+5. Restart services with `docker compose up -d`
 
 This avoids Portainer API/GHCR registry coupling during deployment and is more resilient when Portainer (`:9443`) is unreachable.
 
@@ -124,8 +125,7 @@ This avoids Portainer API/GHCR registry coupling during deployment and is more r
 ```bash
 cd ~/app
 git pull origin main
-docker compose build --pull
-docker compose up -d
+./scripts/deploy-vps.sh ~/app main
 ```
 
 ### Option 3: Railway / Render
@@ -240,9 +240,7 @@ the timeout is usually between your browser/reverse-proxy and Portainer API (por
    ```bash
    # Option A: build directly from source on the VPS (recommended)
    cd ~/app
-   git pull origin main
-   docker compose build --pull
-   docker compose up -d
+   ./scripts/deploy-vps.sh ~/app main
 
    # Option B: pull prebuilt private image from GHCR
    docker login ghcr.io -u YOUR_GITHUB_USER
