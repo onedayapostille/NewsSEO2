@@ -1,5 +1,5 @@
 import express from 'express';
-import { supabase } from '../config/supabase.js';
+import { supabase, isSupabaseConfigured } from '../config/supabase.js';
 import changeDetectionService from '../services/changeDetectionService.js';
 import anomalyDetectionService from '../services/anomalyDetectionService.js';
 
