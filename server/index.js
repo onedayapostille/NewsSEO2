@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import { existsSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { supabase } from './config/supabase.js';
+import { supabase, isSupabaseConfigured, checkDatabaseAvailable } from './config/supabase.js';
 import features from './config/features.js';
 import websitesRouter from './routes/websites.js';
 import crawlRouter from './routes/crawl.js';
@@ -17,7 +17,9 @@ import monitoringRouter from './routes/monitoring.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Load environment from multiple possible locations
 dotenv.config({ path: join(__dirname, '../.env') });
+dotenv.config();
 
 console.log('🔧 Starting News SEO Analyzer Backend...');
 
@@ -61,6 +63,12 @@ if (existsSync(distPath)) {
 let dbConnected = false;
 
 async function checkDatabaseConnection() {
+  if (!isSupabaseConfigured || !supabase) {
+    console.warn('⚠️  Supabase not configured - skipping database check');
+    dbConnected = false;
+    return false;
+  }
+  
   try {
     const { data, error } = await supabase
       .from('websites')
