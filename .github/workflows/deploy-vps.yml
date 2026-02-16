@@ -21,19 +21,21 @@ jobs:
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
-          port: ${{ secrets.VPS_PORT || 22 }}
+          port: ${{ secrets.VPS_PORT }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -e
             cd /opt/newsseo
+            test -f .env || { echo "Missing /opt/newsseo/.env"; exit 1; }
+            test -f docker-compose.yml || { echo "Missing /opt/newsseo/docker-compose.yml"; exit 1; }
             export GHCR_OWNER="$(echo "${{ github.repository_owner }}" | tr "[:upper:]" "[:lower:]")"
             export IMAGE_TAG="latest"
-            export CR_PAT="${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}"
-            export CR_USER="${{ secrets.GHCR_USER || github.actor }}"
+            export CR_PAT="${{ secrets.GHCR_PAT != "" && secrets.GHCR_PAT || github.token }}"
+            export CR_USER="${{ secrets.GHCR_USER != "" && secrets.GHCR_USER || github.actor }}"
 
             echo "$CR_PAT" | docker login ghcr.io -u "$CR_USER" --password-stdin
-            docker compose pull
-            docker compose up -d
+            docker compose --project-name newsseo pull
+            docker compose --project-name newsseo up -d --remove-orphans
             docker logout ghcr.io
 
             PORT="${PORT:-3001}"

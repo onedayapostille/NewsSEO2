@@ -119,7 +119,7 @@ app.get('/api/diagnostics', async (req, res) => {
     try {
       const { data } = await supabase
         .from('integration_settings')
-        .select('provider, is_enabled, last_test_status');
+        .select('provider, is_enabled, config_json, last_test_status');
       integrations = data || [];
     } catch (error) {
       console.warn('Could not fetch integrations:', error.message);
@@ -131,20 +131,26 @@ app.get('/api/diagnostics', async (req, res) => {
       ENABLE_OPENAI: process.env.ENABLE_OPENAI === 'true'
     };
 
+    const hasDbConfig = (provider, fields) => {
+      const row = integrations.find((item) => item.provider === provider);
+      const cfg = row?.config_json || {};
+      return fields.every((field) => Boolean(cfg[field]));
+    };
+
     const integrationReadiness = {
       moz: {
         enabled: envFlags.ENABLE_MOZ,
-        configured: integrations.some((item) => item.provider === 'moz' && item.is_enabled)
+        configured: hasDbConfig('moz', ['accessId', 'secretKey'])
           || Boolean(process.env.MOZ_ACCESS_ID && process.env.MOZ_SECRET_KEY)
       },
       gsc: {
         enabled: envFlags.ENABLE_GSC,
-        configured: integrations.some((item) => item.provider === 'gsc' && item.is_enabled)
+        configured: hasDbConfig('gsc', ['clientId', 'clientSecret', 'redirectUri'])
           || Boolean(process.env.GSC_CLIENT_ID && process.env.GSC_CLIENT_SECRET && process.env.GSC_REDIRECT_URI)
       },
       openai: {
         enabled: envFlags.ENABLE_OPENAI,
-        configured: integrations.some((item) => item.provider === 'openai' && item.is_enabled)
+        configured: hasDbConfig('openai', ['apiKey'])
           || Boolean(process.env.OPENAI_API_KEY)
       }
     };

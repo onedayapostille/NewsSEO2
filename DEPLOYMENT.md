@@ -54,7 +54,7 @@ Remote deploy commands:
 - `VPS_USER`
 - `VPS_PORT`
 - `VPS_SSH_KEY`
-- `GHCR_PAT` (optional; needed only if default token permissions are insufficient)
+- `GHCR_PAT` (recommended for private packages/VPS pull auth; fallback is workflow `github.token`)
 - `GHCR_USER` (optional)
 
 ## 4) VPS setup (primary)
@@ -69,6 +69,8 @@ cd /opt/newsseo
 Copy from repo to VPS:
 - `docker-compose.yml`
 - `.env` (from `.env.example`, filled with real values)
+
+> This deployment uses direct Docker Compose over SSH only. Do **not** use Portainer APIs (9443).
 
 Then deploy:
 

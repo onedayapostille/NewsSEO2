@@ -10,7 +10,6 @@ COPY index.html ./
 COPY tsconfig*.json ./
 COPY vite.config.* ./
 COPY src ./src
-COPY public ./public
 
 RUN npm run build:client
 
