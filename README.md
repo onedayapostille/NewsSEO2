@@ -6,7 +6,22 @@
 
 A comprehensive technical SEO analysis tool specifically designed for news websites. Analyzes canonical strategies, pagination rules, search page handling, indexing control, AMP implementation, and structural issues.
 
-**Production-ready** | **Fully portable** | **Optional integrations** | **Docker support**
+**Production-ready** | **Fully portable** | **Optional integrations** | **Bolt deployment ready**
+
+## Quick Start (Bolt Deployment)
+
+```bash
+# Single command deployment
+npm start
+```
+
+The app serves both frontend and API from a single Express server. See [DEPLOYMENT_BOLT.md](./DEPLOYMENT_BOLT.md) for full deployment guide.
+
+### Health Check
+```bash
+curl http://localhost:3001/health
+# Returns: {"status":"healthy","backend":"ok","database":"connected",...}
+```
 
 ## Features
 

@@ -5,12 +5,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "npm run start:backend",
-    "start:backend": "cd server && npm install && npm start",
-    "start:prod": "cd server && npm start",
-    "dev": "npm run dev:backend",
+    "dev": "vite",
     "dev:backend": "cd server && npm run dev",
-    "install:all": "npm install && cd server && npm install",
+    "build": "npm install && npm run build:client && npm run build:server",
+    "build:client": "vite build",
+    "build:server": "cd server && npm install",
+    "preview": "vite preview",
+    "start": "node server/index.js",
     "postinstall": "cd server && npm install"
   },
   "keywords": ["seo", "news", "analytics", "monitoring", "crawler"],
@@ -18,5 +19,17 @@
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "lucide-react": "^0.263.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@vitejs/plugin-react": "^4.0.3",
+    "typescript": "^5.0.2",
+    "vite": "^4.4.5"
   }
 }

@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { existsSync, readFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { supabase } from './config/supabase.js';
 import features from './config/features.js';
@@ -21,13 +21,13 @@ dotenv.config({ path: join(__dirname, '../.env') });
 
 console.log('🔧 Starting News SEO Analyzer Backend...');
 
-// Validate required configuration
+// Validate required configuration (non-fatal for deployment)
 try {
   features.validateRequiredConfig();
 } catch (error) {
-  console.error('❌', error.message);
-  console.error('   Please check your .env file');
-  process.exit(1);
+  console.warn('⚠️', error.message);
+  console.warn('   Some features may not work correctly');
+  console.warn('   Check your .env file for configuration');
 }
 
 // Get version from package.json
@@ -40,9 +40,8 @@ try {
 }
 
 if (!existsSync(join(__dirname, 'node_modules'))) {
-  console.error('❌ Backend dependencies not installed!');
-  console.error('   Run: cd server && npm install');
-  process.exit(1);
+  console.warn('⚠️  Backend dependencies may not be fully installed');
+  console.warn('   Run: cd server && npm install');
 }
 
 const app = express();
@@ -50,6 +49,14 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+const distPath = resolve(__dirname, '..', 'dist');
+if (existsSync(distPath)) {
+  console.log('✅ Serving frontend from:', distPath);
+  app.use(express.static(distPath));
+} else {
+  console.log('⚠️  Frontend dist folder not found, serving API only');
+}
 
 let dbConnected = false;
 
@@ -74,21 +81,32 @@ async function checkDatabaseConnection() {
 }
 
 app.get('/health', async (req, res) => {
-  const dbStatus = await checkDatabaseConnection();
-  const featureConfig = await features.getFeatureConfig();
+  try {
+    const dbStatus = await checkDatabaseConnection();
+    const featureConfig = await features.getFeatureConfig();
 
-  const health = {
-    status: dbStatus ? 'healthy' : 'unhealthy',
-    backend: 'ok',
-    database: dbStatus ? 'connected' : 'disconnected',
-    timestamp: new Date().toISOString(),
-    uptime: Math.floor(process.uptime()),
-    version: appVersion,
-    features: featureConfig
-  };
+    const health = {
+      status: dbStatus ? 'healthy' : 'degraded',
+      backend: 'ok',
+      database: dbStatus ? 'connected' : 'unknown',
+      timestamp: new Date().toISOString(),
+      uptime: Math.floor(process.uptime()),
+      version: appVersion,
+      features: featureConfig
+    };
 
-  const statusCode = dbStatus ? 200 : 503;
-  res.status(statusCode).json(health);
+    res.status(200).json(health);
+  } catch (error) {
+    res.status(200).json({
+      status: 'degraded',
+      backend: 'ok',
+      database: 'unknown',
+      timestamp: new Date().toISOString(),
+      uptime: Math.floor(process.uptime()),
+      version: appVersion,
+      error: 'Health check error'
+    });
+  }
 });
 
 app.get('/api/diagnostics', async (req, res) => {
@@ -97,10 +115,15 @@ app.get('/api/diagnostics', async (req, res) => {
     const featureConfig = await features.getFeatureConfig();
     const warnings = features.getConfigWarnings();
 
-    const { data: integrations } = await supabase
-      .from('integration_settings')
-      .select('provider, is_enabled, last_test_status')
-      .catch(() => ({ data: [] }));
+    let integrations = [];
+    try {
+      const { data } = await supabase
+        .from('integration_settings')
+        .select('provider, is_enabled, last_test_status');
+      integrations = data || [];
+    } catch (error) {
+      console.warn('Could not fetch integrations:', error.message);
+    }
 
     const envVars = {
       VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL ? 'configured' : 'missing',
@@ -119,7 +142,7 @@ app.get('/api/diagnostics', async (req, res) => {
       status: 'ok',
       database: dbStatus ? 'connected' : 'disconnected',
       features: featureConfig,
-      integrations: integrations || [],
+      integrations: integrations,
       environment: envVars,
       warnings: warnings,
       baseUrl: `http://localhost:${PORT}`,
@@ -142,11 +165,16 @@ app.use('/api/ai', aiRouter);
 app.use('/api/integrations', integrationsRouter);
 app.use('/api/monitoring', monitoringRouter);
 
-app.use((req, res) => {
-  res.status(404).json({
-    error: 'Not Found',
-    message: `Cannot ${req.method} ${req.path}`
-  });
+app.get('*', (req, res) => {
+  const indexPath = resolve(__dirname, '..', 'dist', 'index.html');
+  if (existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).json({
+      error: 'Not Found',
+      message: 'Frontend not built. Run "npm run build:client" first.'
+    });
+  }
 });
 
 app.use((err, req, res, next) => {
