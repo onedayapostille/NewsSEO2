@@ -24,10 +24,10 @@ WORKDIR /app
 RUN adduser -D appuser
 USER appuser
 
-ENV PORT=3001
-EXPOSE 3001
+ENV PORT=8001
+EXPOSE 8001
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD curl -f http://localhost:3001/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD curl -f http://localhost:8001/health || exit 1
 
 CMD ["node", "server/index.js"]
