@@ -28,14 +28,11 @@ jobs:
             
             # Pull latest code
             git pull origin main || git pull origin master
-            
-            # Login to GHCR
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
-            # Pull latest image
-            docker compose pull
-            
-            # Restart services
+
+            # Build directly on server to avoid external registry/Portainer dependencies
+            docker compose build --pull
+
+            # Restart services with the newly built image
             docker compose up -d --remove-orphans
             
             # Cleanup old images

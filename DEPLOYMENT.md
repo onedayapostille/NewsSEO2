@@ -113,15 +113,18 @@ docker compose version
 
 #### Automatic Deployment
 Once configured, pushing to `main` branch will:
-1. Build Docker image via GitHub Actions
-2. Push to GitHub Container Registry (GHCR)
-3. SSH to VPS and run `docker compose up -d`
+1. Build/test in GitHub Actions
+2. SSH to your VPS
+3. Build the image on the VPS with `docker compose build --pull`
+4. Restart services with `docker compose up -d`
+
+This avoids Portainer API/GHCR registry coupling during deployment and is more resilient when Portainer (`:9443`) is unreachable.
 
 #### Manual Deployment (VPS)
 ```bash
 cd ~/app
 git pull origin main
-docker compose pull
+docker compose build --pull
 docker compose up -d
 ```
 
@@ -235,12 +238,19 @@ the timeout is usually between your browser/reverse-proxy and Portainer API (por
    - Password: GitHub PAT with `read:packages`
 5. **Fallback without Portainer registry UI:**
    ```bash
+   # Option A: build directly from source on the VPS (recommended)
+   cd ~/app
+   git pull origin main
+   docker compose build --pull
+   docker compose up -d
+
+   # Option B: pull prebuilt private image from GHCR
    docker login ghcr.io -u YOUR_GITHUB_USER
    docker pull ghcr.io/YOUR_ORG/YOUR_IMAGE:latest
    docker compose up -d
    ```
 
-If the image is private, host-level `docker login ghcr.io` is required before `docker compose pull`.
+If the image is private and you use GHCR pull flow, host-level `docker login ghcr.io` is required before pulling.
 
 ---
 
